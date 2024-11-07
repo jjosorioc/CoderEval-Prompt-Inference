@@ -1,5 +1,6 @@
 import torch
 import os
+import random
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from module import load_prompts
 
@@ -7,9 +8,14 @@ from module import load_prompts
 PYTHON_PROMPTS, JAVA_PROMPTS = load_prompts()
 print("Prompts loaded successfully.")
 
-# Choose one prompt to test
-test_prompt = PYTHON_PROMPTS[0]  # Replace with a specific index or prompt as needed
-prompt_text = test_prompt["prompt"]
+# Choose a random prompt from the JSONLines Reader by converting it to a list of items first
+# Convert JSONLines Reader to a list and select a random prompt
+prompts_list = list(PYTHON_PROMPTS)
+random_prompt = random.choice(prompts_list)
+random_id = random_prompt["question_id"]
+prompt_text = random_prompt["prompt"]
+
+print(f"Randomly selected prompt ID:\n{prompt_text}")
 
 # Global variables
 MAX_LENGTH = 1024  # Max window length
