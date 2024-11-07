@@ -16,12 +16,18 @@ TEMPERATURE = 0.8
 # Model setup
 checkpoint = "Deci/DeciCoder-1b"
 device = "cuda" if torch.cuda.is_available() else "cpu"
+model_cache_dir = "./modules"
 
-tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+# Ensure the cache directory exists
+os.makedirs(model_cache_dir, exist_ok=True)
+
+# Load or cache the tokenizer and model
+tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir=model_cache_dir)
 model = AutoModelForCausalLM.from_pretrained(
     checkpoint, 
     torch_dtype=torch.bfloat16, 
-    trust_remote_code=True
+    trust_remote_code=True,
+    cache_dir=model_cache_dir
 ).to(device)
 
 # Function to generate and store samples for each prompt
@@ -53,7 +59,7 @@ def generate_and_save_samples(prompts, output_path) -> None:
         - Each generated sample is decoded and added as a string to the "generate_results" list.
     """
 
-      # Ensure the output directory exists by extracting the directory from output_path
+    # Ensure the output directory exists by extracting the directory from output_path
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
