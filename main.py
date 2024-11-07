@@ -15,7 +15,7 @@ NUM_SAMPLES = 10   # Number of samples to generate
 TEMPERATURE = 0.8
 
 # Model setup
-checkpoint = "Deci/DeciCoder-1b"
+checkpoint = "Salesforce/codegen2-1B_P"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model_cache_dir = "./models"
 
