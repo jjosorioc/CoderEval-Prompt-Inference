@@ -16,7 +16,7 @@ TEMPERATURE = 0.8
 # Model setup
 checkpoint = "Deci/DeciCoder-1b"
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model_cache_dir = "./modules"
+model_cache_dir = "./models"
 
 # Ensure the cache directory exists
 os.makedirs(model_cache_dir, exist_ok=True)
