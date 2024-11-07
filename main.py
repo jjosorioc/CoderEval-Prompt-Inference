@@ -7,6 +7,7 @@ from module import load_prompts
 
 # Load Python and Java prompts
 PYTHON_PROMPTS, JAVA_PROMPTS = load_prompts()
+print("Prompts loaded successfully.")
 
 # Global variables
 MAX_LENGTH = 1024  # Max window length
@@ -23,12 +24,15 @@ os.makedirs(model_cache_dir, exist_ok=True)
 
 # Load or cache the tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir=model_cache_dir)
+print("Tokenizer loaded successfully.")
+
 model = AutoModelForCausalLM.from_pretrained(
     checkpoint, 
     torch_dtype=torch.bfloat16, 
     trust_remote_code=True,
     cache_dir=model_cache_dir
 ).to(device)
+print("Model loaded successfully.")
 
 # Function to generate and store samples for each prompt
 def generate_and_save_samples(prompts, output_path) -> None:
@@ -89,6 +93,9 @@ def generate_and_save_samples(prompts, output_path) -> None:
 
 # Generate and save samples for Python and Java prompts
 generate_and_save_samples(PYTHON_PROMPTS, './generated_outputs/python_outputs.jsonl')
+print("Python generation complete.")
+
 generate_and_save_samples(JAVA_PROMPTS, './generated_outputs/java_outputs.jsonl')
+print("Java generation complete.")
 
 print("Generation complete and saved to JSONL files.")
