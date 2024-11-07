@@ -30,9 +30,11 @@ model_cache_dir = "./models"
 # Ensure the cache directory exists
 os.makedirs(model_cache_dir, exist_ok=True)
 
-# Load or cache the tokenizer and model
+# Tokenizer setup with pad_token_id set
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir=model_cache_dir)
+tokenizer.pad_token_id = tokenizer.eos_token_id  # Set pad_token_id
 print("Tokenizer loaded successfully.")
+
 
 model = AutoModelForCausalLM.from_pretrained(
     checkpoint, 
@@ -43,9 +45,11 @@ model = AutoModelForCausalLM.from_pretrained(
 print("Model loaded successfully.")
 
 # Generate samples for the test prompt
+# Prepare inputs with attention mask
 inputs = tokenizer(prompt_text, return_tensors="pt").to(device)
 outputs = model.generate(
     inputs["input_ids"],
+    attention_mask=inputs["attention_mask"],  # Add attention_mask for reliability
     max_length=MAX_LENGTH,
     do_sample=True,
     temperature=TEMPERATURE,
