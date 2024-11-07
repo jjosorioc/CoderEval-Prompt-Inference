@@ -12,7 +12,7 @@ print("Prompts loaded successfully.")
 # Global variables
 MAX_LENGTH = 1024  # Max window length
 NUM_SAMPLES = 10   # Number of samples to generate
-TEMPERATURE = 0.8
+TEMPERATURE = 1.0
 
 # Model setup
 checkpoint = "Salesforce/codegen2-1B_P"
@@ -24,6 +24,7 @@ os.makedirs(model_cache_dir, exist_ok=True)
 
 # Load or cache the tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir=model_cache_dir)
+tokenizer.pad_token_id = tokenizer.eos_token_id  # Set pad_token_id
 print("Tokenizer loaded successfully.")
 
 model = AutoModelForCausalLM.from_pretrained(
@@ -79,6 +80,7 @@ def generate_and_save_samples(prompts, output_path) -> None:
             # Generate samples
             outputs = model.generate(
                 inputs["input_ids"],
+                attention_mask=inputs["attention_mask"],
                 max_length=MAX_LENGTH,
                 do_sample=True,
                 temperature=TEMPERATURE,
