@@ -10,7 +10,7 @@ PYTHON_PROMPTS, JAVA_PROMPTS = load_prompts()
 print("Prompts loaded successfully.")
 
 # Global variables
-MAX_LENGTH = 1024  # Max window length
+MAX_LENGTH = 1500  # Max window length
 NUM_SAMPLES = 10   # Number of samples to generate
 TEMPERATURE = 1.0
 
@@ -36,10 +36,14 @@ model = AutoModelForCausalLM.from_pretrained(
 print("Model loaded successfully.")
 
 # Function to generate and store samples for each prompt
+import os
+import re
+import jsonlines
+
 def generate_and_save_samples(prompts, output_path) -> None:
     """
     Generates multiple code samples for each prompt using a language model 
-    and saves the results in a JSONL file.
+    and saves the extracted Python code results in a JSONL file.
 
     Args:
         prompts (list): A list of prompt dictionaries, where each dictionary 
@@ -49,26 +53,62 @@ def generate_and_save_samples(prompts, output_path) -> None:
                            in JSONL format.
 
     Returns:
-        None: This function does not return a value. It writes the generated 
+        None: This function does not return a value. It writes the extracted code 
               outputs to the specified JSONL file.
 
-    Each generated sample is stored with the following structure in the output file:
+    Each extracted code sample is stored with the following structure in the output file:
         {
             "_id": <question_id>,
-            "generate_results": [<sample1>, <sample2>, ..., <sample10>]
+            "generate_results": [<code_sample1>, <code_sample2>, ..., <code_sample10>]
         }
 
     Notes:
         - The function generates 10 samples per prompt using nucleus sampling with a
           temperature setting for controlled randomness.
-        - Each generated sample is decoded and added as a string to the "generate_results" list.
+        - Each generated sample is decoded and processed to extract only the Python code.
     """
 
     # Ensure the output directory exists by extracting the directory from output_path
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
-    
+
+    # Define a function to extract the code from the generated text
+    def extract_code(s):
+        """
+        Extracts the Python code from the generated text.
+        The code starts after '<|python|>' and ends at a sequence of '#' characters or at the end of the string.
+
+        Args:
+            s (str): The input string containing code and other text.
+
+        Returns:
+            str: The extracted Python code.
+        """
+        # Find the position of '<|python|>'
+        start_marker = '<|python|>'
+        start_idx = s.find(start_marker)
+        if start_idx == -1:
+            return ''  # Marker not found
+
+        # Start of code
+        code_start = start_idx + len(start_marker)
+
+        # Define regex pattern to find a sequence of '#' characters (e.g., 50 or more)
+        end_pattern = r'#{20,}'  # Adjust the number as needed
+        # Search for the end pattern after code_start
+        match = re.search(end_pattern, s[code_start:])
+        if match:
+            # End of code is where the pattern starts
+            code_end = code_start + match.start()
+        else:
+            # If no end pattern found, code goes till the end
+            code_end = len(s)
+
+        # Extract code
+        code = s[code_start:code_end].strip()
+        return code
+
     with jsonlines.open(output_path, mode='w') as writer:
         for prompt in prompts:
             question_id = prompt.get("question_id")
@@ -87,11 +127,16 @@ def generate_and_save_samples(prompts, output_path) -> None:
                 num_return_sequences=NUM_SAMPLES
             )
 
-            # Decode each output and store as a list of strings
-            generate_results = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+            # Decode each output and extract the code
+            generate_results = []
+            for output in outputs:
+                decoded = tokenizer.decode(output, skip_special_tokens=True)
+                code = extract_code(decoded)
+                generate_results.append(code)
 
             # Write to JSONL format
             writer.write({"_id": question_id, "generate_results": generate_results})
+
 
 # Generate and save samples for Python and Java prompts
 generate_and_save_samples(PYTHON_PROMPTS, './generated_outputs/python_outputs.jsonl')
