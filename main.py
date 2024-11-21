@@ -7,6 +7,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from module import load_prompts
 from module import extract_python_code
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 # Load Python and Java prompts
 PYTHON_PROMPTS, JAVA_PROMPTS = load_prompts()
 logging.info("Prompts loaded successfully.")
@@ -98,8 +101,10 @@ def generate_and_save_samples(prompts, original_output_path: str, processed_outp
             # Decode each output and save both original and processed versions
             original_results = []
             processed_results = []
+            input_length = inputs["input_ids"].shape[1] # Length of the prompt
+            
             for output in outputs:
-                decoded = tokenizer.decode(output, skip_special_tokens=True)
+                decoded = tokenizer.decode(output[input_length:], skip_special_tokens=True)
                 original_results.append(decoded)
                 processed_code = extract_python_code(decoded)
                 processed_results.append(processed_code)
