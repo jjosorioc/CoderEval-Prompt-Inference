@@ -76,7 +76,8 @@ def generate_and_save_samples(prompts, original_output_path: str, processed_outp
                 max_length=MAX_LENGTH,
                 do_sample=True,
                 temperature=TEMPERATURE,
-                num_return_sequences=NUM_SAMPLES
+                num_return_sequences=NUM_SAMPLES,
+                eos_token_id = tokenizer.encode("<|endofcode|>")[0]
             )
 
             # Decode each output and save both original and processed versions
