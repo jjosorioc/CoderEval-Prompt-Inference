@@ -44,6 +44,7 @@ logging.info("Model loaded successfully.")
 try:
     endofcode_id = tokenizer.encode("<|endofcode|>", add_special_tokens=False)[0]
     logging.info(f"<|endofcode|> token ID: {endofcode_id}")
+    logging.info(f"The eos_token symbol or word is: {tokenizer.decode([endofcode_id])}")
 except IndexError:
     logging.error("<|endofcode|> token is not recognized. Falling back to eos_token_id.")
     endofcode_id = tokenizer.eos_token_id
