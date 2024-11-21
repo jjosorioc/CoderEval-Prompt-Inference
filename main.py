@@ -4,6 +4,7 @@ import os
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from module import load_prompts
+from module import extract_python_code
 
 # Load Python and Java prompts
 PYTHON_PROMPTS, JAVA_PROMPTS = load_prompts()
@@ -29,87 +30,38 @@ print("Tokenizer loaded successfully.")
 
 model = AutoModelForCausalLM.from_pretrained(
     checkpoint, 
-    torch_dtype=torch.bfloat16, 
+    # torch_dtype=torch.bfloat16, 
     trust_remote_code=True,
     cache_dir=model_cache_dir
 ).to(device)
 print("Model loaded successfully.")
 
-# Function to generate and store samples for each prompt
-import os
-import re
-import jsonlines
-
-def generate_and_save_samples(prompts, output_path) -> None:
+# Function to generate and save samples for each prompt
+def generate_and_save_samples(prompts, original_output_path: str, processed_output_path: str) -> None:
     """
     Generates multiple code samples for each prompt using a language model 
-    and saves the extracted Python code results in a JSONL file.
+    and saves both the original and processed (extracted) code results in separate JSONL files.
 
     Args:
         prompts (list): A list of prompt dictionaries, where each dictionary 
                         contains a "question_id" (unique identifier) and "prompt" 
                         (the text input for code generation).
-        output_path (str): The file path where the generated samples will be saved 
-                           in JSONL format.
+        original_output_path (str): The file path where the original generated samples will be saved.
+        processed_output_path (str): The file path where the processed (extracted) samples will be saved.
 
     Returns:
-        None: This function does not return a value. It writes the extracted code 
-              outputs to the specified JSONL file.
-
-    Each extracted code sample is stored with the following structure in the output file:
-        {
-            "_id": <question_id>,
-            "generate_results": [<code_sample1>, <code_sample2>, ..., <code_sample10>]
-        }
-
-    Notes:
-        - The function generates 10 samples per prompt using nucleus sampling with a
-          temperature setting for controlled randomness.
-        - Each generated sample is decoded and processed to extract only the Python code.
+        None: This function does not return a value. It writes the outputs to the specified JSONL files.
     """
+    # Ensure the output directories exist
+    original_output_dir = os.path.dirname(original_output_path)
+    processed_output_dir = os.path.dirname(processed_output_path)
+    if original_output_dir:
+        os.makedirs(original_output_dir, exist_ok=True)
+    if processed_output_dir:
+        os.makedirs(processed_output_dir, exist_ok=True)
 
-    # Ensure the output directory exists by extracting the directory from output_path
-    output_dir = os.path.dirname(output_path)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-
-    # Define a function to extract the code from the generated text
-    def extract_code(s):
-        """
-        Extracts the Python code from the generated text.
-        The code starts after '<|python|>' and ends at a sequence of '#' characters or at the end of the string.
-
-        Args:
-            s (str): The input string containing code and other text.
-
-        Returns:
-            str: The extracted Python code.
-        """
-        # Find the position of '<|python|>'
-        start_marker = '<|python|>'
-        start_idx = s.find(start_marker)
-        if start_idx == -1:
-            return ''  # Marker not found
-
-        # Start of code
-        code_start = start_idx + len(start_marker)
-
-        # Define regex pattern to find a sequence of '#' characters (e.g., 50 or more)
-        end_pattern = r'#{20,}'  # Adjust the number as needed
-        # Search for the end pattern after code_start
-        match = re.search(end_pattern, s[code_start:])
-        if match:
-            # End of code is where the pattern starts
-            code_end = code_start + match.start()
-        else:
-            # If no end pattern found, code goes till the end
-            code_end = len(s)
-
-        # Extract code
-        code = s[code_start:code_end].strip()
-        return code
-
-    with jsonlines.open(output_path, mode='w') as writer:
+    with jsonlines.open(original_output_path, mode='w') as original_writer, \
+         jsonlines.open(processed_output_path, mode='w') as processed_writer:
         for prompt in prompts:
             question_id = prompt.get("question_id")
             prompt_text = prompt.get("prompt")
@@ -127,22 +79,31 @@ def generate_and_save_samples(prompts, output_path) -> None:
                 num_return_sequences=NUM_SAMPLES
             )
 
-            # Decode each output and extract the code
-            generate_results = []
+            # Decode each output and save both original and processed versions
+            original_results = []
+            processed_results = []
             for output in outputs:
                 decoded = tokenizer.decode(output, skip_special_tokens=True)
-                code = extract_code(decoded)
-                generate_results.append(code)
+                original_results.append(decoded)
+                processed_code = extract_python_code(decoded)
+                processed_results.append(processed_code)
 
-            # Write to JSONL format
-            writer.write({"_id": question_id, "generate_results": generate_results})
+            # Write results to JSONL files
+            original_writer.write({"_id": question_id, "generate_results": original_results})
+            processed_writer.write({"_id": question_id, "generate_results": processed_results})
 
+# Generate and save samples for Python prompts
+checkpoint_safe_name = checkpoint.replace("/", "_")
+original_output_path = f'./generated_outputs/{checkpoint_safe_name}/python_original_outputs.jsonl'
+processed_output_path = f'./generated_outputs/{checkpoint_safe_name}/python_processed_outputs.jsonl'
 
-# Generate and save samples for Python and Java prompts
-generate_and_save_samples(PYTHON_PROMPTS, './generated_outputs/python_outputs.jsonl')
+generate_and_save_samples(PYTHON_PROMPTS, original_output_path, processed_output_path)
 print("Python generation complete.")
 
-generate_and_save_samples(JAVA_PROMPTS, './generated_outputs/java_outputs.jsonl')
-print("Java generation complete.")
+# Uncomment and modify the following lines if you want to generate samples for Java prompts
+# original_java_output_path = f'./generated_outputs/{checkpoint_safe_name}/java_original_outputs.jsonl'
+# processed_java_output_path = f'./generated_outputs/{checkpoint_safe_name}/java_processed_outputs.jsonl'
+# generate_and_save_samples(JAVA_PROMPTS, original_java_output_path, processed_java_output_path)
+# print("Java generation complete.")
 
 print("Generation complete and saved to JSONL files.")
