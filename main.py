@@ -25,7 +25,7 @@ os.makedirs(model_cache_dir, exist_ok=True)
 
 # Load or cache the tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir=model_cache_dir)
-tokenizer.pad_token_id = tokenizer.eos_token_id  # Set pad_token_id
+
 print("Tokenizer loaded successfully.")
 
 model = AutoModelForCausalLM.from_pretrained(
