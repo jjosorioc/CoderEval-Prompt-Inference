@@ -101,13 +101,21 @@ def generate_and_save_samples(prompts, original_output_path: str, processed_outp
             # Decode each output and save both original and processed versions
             original_results = []
             processed_results = []
-            input_length = inputs["input_ids"].shape[1] # Length of the prompt
-            
+            input_length = inputs["input_ids"].shape[1]  # Length of the prompt tokens
+
             for output in outputs:
-                decoded = tokenizer.decode(output[input_length:], skip_special_tokens=True)
+                # Decode the generated content while excluding the prompt
+                generated_tokens = output[input_length:]
+                decoded = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+
+                # Strip potential residual prompt overlap in case of partial matches
+                if decoded.startswith(prompt_text.strip()):
+                    decoded = decoded[len(prompt_text.strip()):].strip()
+                
                 original_results.append(decoded)
                 processed_code = extract_python_code(decoded)
                 processed_results.append(processed_code)
+
 
             # Write results to JSONL files
             original_writer.write({"_id": question_id, "generate_results": original_results})
