@@ -30,7 +30,7 @@ print("Tokenizer loaded successfully.")
 
 model = AutoModelForCausalLM.from_pretrained(
     checkpoint, 
-    # torch_dtype=torch.bfloat16, 
+    torch_dtype= "auto", 
     trust_remote_code=True,
     cache_dir=model_cache_dir
 ).to(device)
