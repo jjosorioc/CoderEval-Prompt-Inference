@@ -1,6 +1,7 @@
 import torch
 import jsonlines
 import os
+import logging
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from module import load_prompts
@@ -8,7 +9,7 @@ from module import extract_python_code
 
 # Load Python and Java prompts
 PYTHON_PROMPTS, JAVA_PROMPTS = load_prompts()
-print("Prompts loaded successfully.")
+logging.info("Prompts loaded successfully.")
 
 # Global variables
 MAX_LENGTH = 1500  # Max window length
@@ -26,7 +27,7 @@ os.makedirs(model_cache_dir, exist_ok=True)
 # Load or cache the tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, cache_dir=model_cache_dir)
 
-print("Tokenizer loaded successfully.")
+logging.info("Tokenizer loaded successfully.")
 
 model = AutoModelForCausalLM.from_pretrained(
     checkpoint, 
@@ -34,7 +35,21 @@ model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=True,
     cache_dir=model_cache_dir
 ).to(device)
-print("Model loaded successfully.")
+logging.info("Model loaded successfully.")
+
+# Validate endofcode token
+try:
+    endofcode_id = tokenizer.encode("<|endofcode|>", add_special_tokens=False)[0]
+    logging.info(f"<|endofcode|> token ID: {endofcode_id}")
+except IndexError:
+    logging.error("<|endofcode|> token is not recognized. Falling back to eos_token_id.")
+    endofcode_id = tokenizer.eos_token_id
+    logging.error(f"eos_token_id: {endofcode_id}")
+    eos_token = tokenizer.decode([endofcode_id])
+    logging.error(f"The eos_token symbol or word is: {eos_token}")
+    
+
+
 
 # Function to generate and save samples for each prompt
 def generate_and_save_samples(prompts, original_output_path: str, processed_output_path: str) -> None:
@@ -77,7 +92,7 @@ def generate_and_save_samples(prompts, original_output_path: str, processed_outp
                 do_sample=True,
                 temperature=TEMPERATURE,
                 num_return_sequences=NUM_SAMPLES,
-                eos_token_id = tokenizer.encode("<|endofcode|>")[0]
+                eos_token_id = endofcode_id
             )
 
             # Decode each output and save both original and processed versions
@@ -99,7 +114,7 @@ original_output_path = f'./generated_outputs/{checkpoint_safe_name}/python_origi
 processed_output_path = f'./generated_outputs/{checkpoint_safe_name}/python_processed_outputs.jsonl'
 
 generate_and_save_samples(PYTHON_PROMPTS, original_output_path, processed_output_path)
-print("Python generation complete.")
+logging.info("Python generation complete.")
 
 # Uncomment and modify the following lines if you want to generate samples for Java prompts
 # original_java_output_path = f'./generated_outputs/{checkpoint_safe_name}/java_original_outputs.jsonl'
@@ -107,4 +122,4 @@ print("Python generation complete.")
 # generate_and_save_samples(JAVA_PROMPTS, original_java_output_path, processed_java_output_path)
 # print("Java generation complete.")
 
-print("Generation complete and saved to JSONL files.")
+logging.info("Generation complete and saved to JSONL files.")
