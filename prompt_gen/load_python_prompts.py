@@ -1,8 +1,8 @@
 import jsonlines
 
 # Define the paths to the JSONL files
-PYTHON_JSONL_PATH = './CoderEval-Input4Models/CEPythonRaw.jsonl'
-JAVA_JSONL_PATH = './CoderEval-Input4Models/CEJavaRaw.jsonl'
+PYTHON_JSONL_PATH = './prompt_gen/CoderEval-Input4Models/CEPythonRaw.jsonl'
+JAVA_JSONL_PATH = './prompt_gen/CoderEval-Input4Models/CEJavaRaw.jsonl'
 
 # Create a dictionary to store prompts using question_id and language as keys
 prompts = {"python": {}, "java": {}}
@@ -18,6 +18,7 @@ def generate_prompts(file_path, language):
                 f"Function Signature:\n{obj['signature']}\n\n"
                 f"Function Description:\n{obj['docstring']}\n\n"
                 f"Function Input Code:\n{obj['input']}\n\n"
+                f"Only return the relevant code implementation. Nothing else should be included."
             )
             
             # Store the prompt using question_id as the key under the specified language
@@ -28,8 +29,8 @@ generate_prompts(PYTHON_JSONL_PATH, "python")
 generate_prompts(JAVA_JSONL_PATH, "java")
 
 # Define output paths for the generated prompts
-output_path_python = './prompts/python_generated_prompts.jsonl'
-output_path_java = './prompts/java_generated_prompts.jsonl'
+output_path_python = './prompt_gen/prompts/python_generated_prompts.jsonl'
+output_path_java = './prompt_gen/prompts/java_generated_prompts.jsonl'
 
 # Write prompts to JSONL files for each language
 for language, output_path in [("python", output_path_python), ("java", output_path_java)]:
